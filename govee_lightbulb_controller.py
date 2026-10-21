@@ -10,57 +10,14 @@
 import asyncio
 from govee_ble_local import discover, create_device
 
-import datetime
 from lightbulb_controller import LightbulbController
 
-# async def main():
-#     devices = await discover(timeout=10, allow_modelled=True)
-#     info = next(
-#         (d for d in devices if d.ble_device.address.lower() == MAC_ADDRESS.lower()),
-#         None
-#     )
-
-#     if info is None:
-#         print("Bulb not found.")
-#         return
-
-#     bulb = create_device(
-#         info.ble_device, info.sku, info.advertisement,
-#         allow_modelled=True
-#     )
-
-#     try:
-#         await bulb.update()
-#         print(f"Connected to bulb: {MAC_ADDRESS}")
-
-#         await bulb.turn_on()
-#         await bulb.set_brightness(50)
-#         await bulb.set_rgb((255, 0, 0))
-
-#         # Check connection status
-#         while True:
-#             await asyncio.sleep(5)
-#             try:
-#                 await bulb.update()
-#                 print("Status: Connected.")
-#             except Exception as e:
-#                 print(f"Status: Disconnected. ({e})")
-#                 break
-
-#     except Exception as e:
-#         print(f"Connection or command failed: {e}")
-
-#     finally:
-#         await bulb.stop()
-#         print("Disconnected.")
-
-# asyncio.run(main())
-
 class GoveeLightbulbController(LightbulbController):
-    def __init__(self, name, MAC_ADDRESS):
+    def __init__(self, name, MAC_ADDRESS, check_status_callback=None):
         super().__init__(name)
         self.MAC = MAC_ADDRESS
         self.bulb = None
+        self.check_status_callback = check_status_callback # call back function to let the lighting interface know to check its lights
 
     async def connect(self):
         '''connect to the lightbulb if necessary, throws error if fail'''
@@ -78,11 +35,17 @@ class GoveeLightbulbController(LightbulbController):
         pass
 
     async def turn_on(self):
-        await self.bulb.turn_on()
+        try:
+            await asyncio.wait_for(self.bulb.turn_on(), timeout=3.0)
+        except Exception as e:
+            await self.check_status_callback()
     
 
     async def turn_off(self):
-        await self.bulb.turn_off()
+        try:
+            await asyncio.wait_for(self.bulb.turn_off(), timeout=3.0)
+        except Exception as e:
+            await self.check_status_callback()
 
     async def set_brightness(self, brightness: int):
         '''brightness from 0-100, if available. returns False if unavailable'''

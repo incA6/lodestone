@@ -124,7 +124,7 @@ class LightingInterface:
         # must be run again if configurations or lights change
         
         # TODO: (fix) temp, for now, add just the one govee lightbulb to the matrix
-        light1 = GoveeLightbulbController("light1", "D4:13:68:C4:45:E3")
+        light1 = GoveeLightbulbController("light1", "D4:13:68:C4:45:E3", self.check_active_lights)
         self.lighting_matrix.append(light1)
 
     async def retry(self):
@@ -141,18 +141,20 @@ class LightingInterface:
         '''periodically checks all active lights (if the lights are checkable)'''
         while True:
             # print("connection test loop")
-            for light in self.lighting_matrix:
-                if (light.active):
-                    try:
-                        await light.test_connection()
-                    except Exception as e:
-                        # light disconnected
-                        print(f"{light.name} found disconnected.")
-                        light.active = False
-                        if light not in self.disconnected_lights:
-                            self.disconnected_lights.append(light)
-            
+            await self.check_active_lights()
             await asyncio.sleep(LightingInterface.CONNECTION_TEST_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
+
+    async def check_active_lights(self):
+        for light in self.lighting_matrix:
+            if (light.active):
+                try:
+                    await light.test_connection()
+                except Exception as e:
+                    # light disconnected
+                    print(f"{light.name} found disconnected.")
+                    light.active = False
+                    if light not in self.disconnected_lights:
+                        self.disconnected_lights.append(light)
 
 
 class LightNotFound(Exception):
@@ -168,7 +170,7 @@ class InvalidLightingCommand(Exception):
 def console(lighting):
 
     print("=========================================================")
-    print("\t\tWelcome to the Lodestone.")
+    print("\t\tinterFACE.")
     print("=========================================================")
     print()
 
