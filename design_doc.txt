@@ -1,0 +1,11 @@
+LIGHTING DESIGN:
+
+Lights list:
+    - 
+
+
+Features/commands:
+    - individual on/off + brightness slider for individual lights
+    - modular remotes to control individual lights
+    - MODES: day (all lights on), nightlight (dim 1 light, activated with switch near bed), evening (warm lights near night), wind down (1 medium-bright warm light), off (all off)
+    - automated routines using a customizable schedule: switches to day mode upon wake up, evening mode

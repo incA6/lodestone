@@ -5,6 +5,8 @@ Base of operations homebase hub.
 Manages home lights, temperature, etc. as well as the Oracle webserver.
 Connects to my tech.
 
+Mostly written by me, yours truly (what's the fun if it's not my own design... generative code only used for syntax and usage of libraries)
+
 For now:
     - central hub // lodestone code run on main computer
     - no remotes
