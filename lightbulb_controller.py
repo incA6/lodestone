@@ -56,7 +56,7 @@ class LightbulbController(ABC):
 
     @abstractmethod
     async def test_connection(self):
-        '''returns status of if lightbulb is connected, if available'''
+        '''throws error if disconnected'''
         pass
 
     @abstractmethod

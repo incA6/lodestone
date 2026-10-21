@@ -21,37 +21,89 @@ class Lighting:
     '''interfaces with all lights in the setup and allows for user commands + customization'''
 
     # class variables
-    RETRY_TIMER = 60 # seconds
+    RETRY_TIMER = 5 # seconds
+    CONNECTION_TEST_TIMER = 4 # seconds
+    VALID_COMMANDS = ["on", "off"]
 
     def __init__(self, settings_file_loc):
         self.settings_file_loc = settings_file_loc
         self.lighting_matrix = []
         self.disconnected_lights = []
+        self.command_queue = asyncio.Queue()
 
         self.read_lighting_file(self.settings_file_loc)
 
     def start(self):
-        asyncio.start(self.main())
+        asyncio.run(self.main())
+
+    def get_available_commands(self, target):
+        # target = light
+        pass
+
+    def queue_command(self, target, command, args=None):
+        '''public method to call a command'''
+        # target = light name
+
+        # find target light
+        light = None
+        for l in self.lighting_matrix:
+            if l.name == target:
+                light = l
+                break
+        if light == None: # target light not found
+            raise LightNotFound(f"Light: {target} not found")
+        
+        # append command to queue
+        if command in Lighting.VALID_COMMANDS: # check valid command
+            self.command_queue.put_nowait((light, command))
+        else:
+            raise InvalidLightingCommand(f"{command} not in {Lighting.VALID_COMMANDS}")
+        
+
 
     # main async entry point
     async def main(self):
         # attempt to connect to each registered light
-        for light in self.lighting_matrix:
-            try:
-                await light.connect()
-                await light.test_connection()
-            except Exception as e:
-                # light failed to connect, add to disconnected list
-                print(f"{type(e).__name__}: {e}")
-                light.active = False
-                if light not in self.disconnected_lights:
-                    self.disconnected_lights.append(light)
-                continue
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(self.connect_light(light)) for light in self.lighting_matrix]
+        # ^^ waits for all of these to be done before going forward
+
+        # start retry loop
+        asyncio.create_task(self.retry())
+
+        # start auto connection test loop
+        asyncio.create_task(self.connection_test_loop())
+
+        # start command processing loop that waits for new tasks and then STARTS them whenever they come in (since we have to wait for most of them)
+        while True:
+            command = await self.command_queue.get()
+
+            # process command
+            if command[1] == Lighting.VALID_COMMANDS[0]: # on
+                asyncio.create_task(command[0].turn_on())
+            elif command[1] == Lighting.VALID_COMMANDS[1]: # off
+                asyncio.create_task(command[0].turn_off())
+            else:
+                raise InvalidLightingCommand(f"Unexpected invalid command: {command[1]}")
+
+
+    async def connect_light(self, light):
+        print(f"Attempting to connect: {light.name}")
+        try:
+            await light.connect()
+            await light.test_connection()
 
             # light works, mark as active
             print(f"Light: {light.name} is connected.")
             light.active = True
-
+            if light in self.disconnected_lights:
+                self.disconnected_lights.remove(light)
+        except Exception as e:
+            # light failed to connect, add to disconnected list
+            print(f"{type(e).__name__}: {e}")
+            light.active = False
+            if light not in self.disconnected_lights:
+                self.disconnected_lights.append(light)
 
     def read_lighting_file(self, settings_file_loc):
         '''reads expected lights, configurations, schedules from file ---> then initializes lights (ie. lighting matrix)'''
@@ -64,17 +116,89 @@ class Lighting:
     async def retry(self):
         '''periodically retries all disconnected lights'''
 
-        for light in self.disconnected_lights:
-            print(f"Retrying a connection to {light.name}.")
-            try:
-                await light.connect()
-                await light.test_connection()
-            except:
-                #TODO: log error to console
-                continue # skip
+        while True:
+            # print("retry loop")
+            for light in self.disconnected_lights:
+                await self.connect_light(light)
+            
+            await asyncio.sleep(Lighting.RETRY_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
 
-            # light connected successfully, add to mark as active and remove from list
-            light.active = True
-            self.disconnected_lights.remove(light)
-        
-        await asyncio.sleep(Lighting.RETRY_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
+    async def connection_test_loop(self):
+        '''periodically checks all active lights (if the lights are checkable)'''
+        while True:
+            # print("connection test loop")
+            for light in self.lighting_matrix:
+                if (light.active):
+                    try:
+                        await light.test_connection()
+                    except Exception as e:
+                        # light disconnected
+                        print(f"{light.name} found disconnected.")
+                        light.active = False
+                        if light not in self.disconnected_lights:
+                            self.disconnected_lights.append(light)
+            
+            await asyncio.sleep(Lighting.CONNECTION_TEST_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
+
+
+class LightNotFound(Exception):
+    pass
+
+class InvalidLightingCommand(Exception):
+    pass
+
+
+
+# TESTING
+
+import threading
+
+def console(lighting):
+
+    print("=========================================================")
+    print("\t\tWelcome to the Lodestone.")
+    print("=========================================================")
+    print()
+
+    HELP = '''Commands List:
+                1 -- on
+                2 -- off
+                '''
+
+    # user input loop
+    while True:
+        print("Please enter a command. Q for quit. Help for a commands list.")
+        answer = input()
+        if answer.lower() == "q":
+            print("Exiting console.")
+            break
+
+        elif answer.lower() == "1":
+            print("queueing ON command")
+            lighting.queue_command("light1", "on")
+
+        elif answer.lower() == "2":
+            print("queueing OFF command")
+            lighting.queue_command("light1", "off")
+
+        elif answer.lower() == "help": 
+            print(HELP)
+
+        else:
+            print("Unknown command.")
+
+def main():
+    lighting = Lighting("current_device_list.txt")
+
+    t1 = threading.Thread(target=console, args=(lighting,))
+    t2 = threading.Thread(target=lighting.start)
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+
+    
+
+if __name__ == "__main__":
+    main()

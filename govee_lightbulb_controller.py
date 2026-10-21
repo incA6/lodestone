@@ -93,7 +93,7 @@ class GoveeLightbulbController(LightbulbController):
         pass
 
     async def test_connection(self):
-        '''returns status of if lightbulb is connected, if available'''
+        '''throws error if disconnected'''
         try:
             await self.bulb.update()
         except Exception as e:
