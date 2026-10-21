@@ -14,6 +14,9 @@
 # 5. (very optional) run diagnostic by turning on and off each light to test
 
 import asyncio
+import threading
+
+import time # testing
 
 from govee_lightbulb_controller import *
 
@@ -21,19 +24,22 @@ class Lighting:
     '''interfaces with all lights in the setup and allows for user commands + customization'''
 
     # class variables
-    RETRY_TIMER = 5 # seconds
-    CONNECTION_TEST_TIMER = 4 # seconds
+    RETRY_TIMER = 30 # seconds
+    CONNECTION_TEST_TIMER = 10 # seconds
     VALID_COMMANDS = ["on", "off"]
 
     def __init__(self, settings_file_loc):
         self.settings_file_loc = settings_file_loc
         self.lighting_matrix = []
         self.disconnected_lights = []
-        self.command_queue = asyncio.Queue()
+        self.command_queue = asyncio.Queue() # <--- this is not thread safe so we use self.loop below
 
-        self.read_lighting_file(self.settings_file_loc)
+        # to keep queue thread safe
+        self.loop = None # this will be the current running event loop
+        self.loop_ready = threading.Event()
 
     def start(self):
+        self.read_lighting_file(self.settings_file_loc)
         asyncio.run(self.main())
 
     def get_available_commands(self, target):
@@ -53,16 +59,22 @@ class Lighting:
         if light == None: # target light not found
             raise LightNotFound(f"Light: {target} not found")
         
-        # append command to queue
-        if command in Lighting.VALID_COMMANDS: # check valid command
-            self.command_queue.put_nowait((light, command))
-        else:
-            raise InvalidLightingCommand(f"{command} not in {Lighting.VALID_COMMANDS}")
+        # check valid command
+        if command not in self.VALID_COMMANDS:
+            raise InvalidLightingCommand(f"{command} not in {self.VALID_COMMANDS}")
+        
+        # append command to queue (in a threadsafe manner)
+        self.loop_ready.wait()
+        self.loop.call_soon_threadsafe(self.command_queue.put_nowait,(light, command, args))
+        
         
 
 
     # main async entry point
     async def main(self):
+        self.loop = asyncio.get_running_loop() # get a reference to current running loop
+        self.loop_ready.set() # now, after the reference is set, we signal that the loop is ready for command queue
+
         # attempt to connect to each registered light
         async with asyncio.TaskGroup() as tg:
             tasks = [tg.create_task(self.connect_light(light)) for light in self.lighting_matrix]
@@ -76,15 +88,17 @@ class Lighting:
 
         # start command processing loop that waits for new tasks and then STARTS them whenever they come in (since we have to wait for most of them)
         while True:
-            command = await self.command_queue.get()
+            light, command, args = await self.command_queue.get()
 
             # process command
-            if command[1] == Lighting.VALID_COMMANDS[0]: # on
-                asyncio.create_task(command[0].turn_on())
-            elif command[1] == Lighting.VALID_COMMANDS[1]: # off
-                asyncio.create_task(command[0].turn_off())
-            else:
-                raise InvalidLightingCommand(f"Unexpected invalid command: {command[1]}")
+            try:
+                if command == Lighting.VALID_COMMANDS[0]: # on
+                    asyncio.create_task(light.turn_on())
+                elif command == Lighting.VALID_COMMANDS[1]: # off
+                    asyncio.create_task(light.turn_off())
+            except Exception as e:
+                print(f"Command failed: {e}")
+                
 
 
     async def connect_light(self, light):
@@ -150,8 +164,6 @@ class InvalidLightingCommand(Exception):
 
 
 # TESTING
-
-import threading
 
 def console(lighting):
 
