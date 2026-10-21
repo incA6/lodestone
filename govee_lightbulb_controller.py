@@ -23,4 +23,8 @@ async def main():
 
     await bulb.stop()
 
-asyncio.run(main())
+# asyncio.run(main())
+
+class GoveeLightbulbController:
+    pass
+

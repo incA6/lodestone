@@ -1,11 +1,20 @@
 # base class for all lightbulb controller types
+# throws errors for Lighting to catch and log
 
 from abc import ABC, abstractmethod
 
-class lightbulb_controller(ABC):
+class LightbulbController(ABC):
+
+    def __init__(self, name):
+        self.name = name
+
+    @property
+    def name(self):
+        return self.name
+
     @abstractmethod
-    def connect_and_stay_connected(self):
-        '''connect to the lightbulb if necessary, throws error if disconnect'''
+    def connect(self):
+        '''connect to the lightbulb if necessary, throws error if fail'''
         pass
 
     @abstractmethod
