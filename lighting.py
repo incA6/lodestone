@@ -26,6 +26,7 @@ class Lighting:
     # class variables
     RETRY_TIMER = 30 # seconds
     CONNECTION_TEST_TIMER = 10 # seconds
+    
     VALID_COMMANDS = ["on", "off"]
 
     def __init__(self, settings_file_loc):
@@ -42,9 +43,8 @@ class Lighting:
         self.read_lighting_file(self.settings_file_loc)
         asyncio.run(self.main())
 
-    def get_available_commands(self, target):
-        # target = light
-        pass
+    def get_available_lights(self):
+        return [light for light in self.lighting_matrix if light.active == True]
 
     def queue_command(self, target, command, args=None):
         '''public method to call a command'''

@@ -3,14 +3,17 @@
 import threading
 import asyncio
 
-from lighting import Lighting
+from lighting import *
 
 # server management thread
 
 # lighting and sensor control thread
+def lighting_manager(lighting):
+    lighting.start()
+
 
 # user input thread
-def console_input_loop():
+def console_controller(lighting):
 
     print("=========================================================")
     print("\t\tWelcome to the Lodestone.")
@@ -18,8 +21,8 @@ def console_input_loop():
     print()
 
     HELP = '''Commands List:
-                1
-                2 
+                1 - ON
+                2 - OFF
                 3'''
 
     # user input loop
@@ -30,6 +33,14 @@ def console_input_loop():
             print("Exiting console.")
             break
 
+        elif answer.lower() == "1":
+            print("queueing ON command")
+            lighting.queue_command("light1", "on")
+
+        elif answer.lower() == "2":
+            print("queueing OFF command")
+            lighting.queue_command("light1", "off")
+
         elif answer.lower() == "help": 
             print(HELP)
 
@@ -39,8 +50,10 @@ def console_input_loop():
 # main thread
 def main():
     threads = []
+    lighting = Lighting("f")
 
-    threads.append( threading.Thread(target=console_input_loop) )
+    threads.append( threading.Thread(target=console_controller, args=(lighting,)) ) # console
+    threads.append( threading.Thread(target=lighting_manager, args=(lighting,)) ) # lighting
 
     for t in threads:
         t.start()
