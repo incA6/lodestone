@@ -23,7 +23,7 @@ def console_controller(lighting_interface):
     HELP = '''Commands List:
                 1 - ON
                 2 - OFF
-                3'''
+                3 - TIMER WITH FLASH'''
 
     # user input loop
     while True:

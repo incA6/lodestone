@@ -27,7 +27,7 @@ class LightingInterface:
     RETRY_TIMER = 30 # seconds
     CONNECTION_TEST_TIMER = 10 # seconds
     
-    VALID_COMMANDS = ["on", "off"]
+    VALID_COMMANDS = ["on", "off", "flash"]
 
     def __init__(self, settings_file_loc):
         self.settings_file_loc = settings_file_loc

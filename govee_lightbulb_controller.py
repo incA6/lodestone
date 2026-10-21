@@ -36,14 +36,14 @@ class GoveeLightbulbController(LightbulbController):
 
     async def turn_on(self):
         try:
-            await asyncio.wait_for(self.bulb.turn_on(), timeout=3.0)
+            await asyncio.wait_for(self.bulb.turn_on(), timeout=5.0)
         except Exception as e:
             await self.check_status_callback()
     
 
     async def turn_off(self):
         try:
-            await asyncio.wait_for(self.bulb.turn_off(), timeout=3.0)
+            await asyncio.wait_for(self.bulb.turn_off(), timeout=5.0)
         except Exception as e:
             await self.check_status_callback()
 
