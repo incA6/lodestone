@@ -1,30 +1,189 @@
 # wrap the code controlling each light into a black box with known functions: on/off, dimmer (if available), warmth (if available), color (if available)
 # this inherits from the lightbulb controller class
-
-import datetime
+# design: does the thing and throws and error if it doesn't work
 
 # TODO: temp, add more robust centralized non-hardcoded version later
-MAC_ADDRESS = "D4:13:68:C4:45:E3"
+# MAC_ADDRESS = "D4:13:68:C4:45:E3"
 
 # current_time = datetime.now().time()
 
 import asyncio
 from govee_ble_local import discover, create_device
 
-async def main():
-    devices = await discover(timeout=10, allow_modelled=True)
-    info = next(d for d in devices if d.ble_device.address.lower() == MAC_ADDRESS.lower()) # find my govee lightbulb(s)
-    bulb = create_device(info.ble_device, info.sku, info.advertisement, allow_modelled=True)
+import datetime
+from lightbulb_controller import LightbulbController
 
-    await bulb.turn_on()
-    await bulb.set_brightness(50)
-    await bulb.set_rgb((255, 0, 0))
-    # await bulb.turn_off()
+# async def main():
+#     devices = await discover(timeout=10, allow_modelled=True)
+#     info = next(
+#         (d for d in devices if d.ble_device.address.lower() == MAC_ADDRESS.lower()),
+#         None
+#     )
 
-    await bulb.stop()
+#     if info is None:
+#         print("Bulb not found.")
+#         return
+
+#     bulb = create_device(
+#         info.ble_device, info.sku, info.advertisement,
+#         allow_modelled=True
+#     )
+
+#     try:
+#         await bulb.update()
+#         print(f"Connected to bulb: {MAC_ADDRESS}")
+
+#         await bulb.turn_on()
+#         await bulb.set_brightness(50)
+#         await bulb.set_rgb((255, 0, 0))
+
+#         # Check connection status
+#         while True:
+#             await asyncio.sleep(5)
+#             try:
+#                 await bulb.update()
+#                 print("Status: Connected.")
+#             except Exception as e:
+#                 print(f"Status: Disconnected. ({e})")
+#                 break
+
+#     except Exception as e:
+#         print(f"Connection or command failed: {e}")
+
+#     finally:
+#         await bulb.stop()
+#         print("Disconnected.")
 
 # asyncio.run(main())
 
-class GoveeLightbulbController:
+class GoveeLightbulbController(LightbulbController):
+    def __init__(self, name, MAC_ADDRESS):
+        super().__init__(name)
+        self.MAC = MAC_ADDRESS
+        self.bulb = None
+
+    async def connect(self):
+        '''connect to the lightbulb if necessary, throws error if fail'''
+        
+        devices = await discover(timeout=10, allow_modelled=True)
+        info = next((d for d in devices if d.ble_device.address.lower() == self.MAC.lower()), None)
+
+        if info is None:
+            raise BulbNotFound(f"Bulb not found: {self.MAC}")
+
+        self.bulb = create_device(info.ble_device, info.sku, info.advertisement, allow_modelled=True)
+
+    async def disconnect(self):
+        '''disconnect from the lightbulb if available'''
+        pass
+
+    async def turn_on(self):
+        await self.bulb.turn_on()
+    
+
+    async def turn_off(self):
+        await self.bulb.turn_off()
+
+    async def set_brightness(self, brightness: int):
+        '''brightness from 0-100, if available. returns False if unavailable'''
+        pass
+
+    async def set_rgb(self, r: int, g: int, b: int):
+        '''rgb, if available. returns False if unavailable'''
+        pass
+
+    async def test_connection(self):
+        '''returns status of if lightbulb is connected, if available'''
+        try:
+            await self.bulb.update()
+        except Exception as e:
+            raise BulbNotConnected(e)
+
+    async def status(self):
+        '''returns status (on/off)'''
+        pass
+
+    async def repeated_flahes(self, on_off: bool):
+        '''flashes repeatedly, if available (not safe for power switches)'''
+        pass    
+
+class BulbNotFound(Exception):
     pass
 
+class BulbNotConnected(Exception):
+    pass
+
+
+
+
+
+# TESTING
+
+
+async def test():
+
+    L1 = None # light
+
+    # user input loop
+    while True:
+        print("Commands: q, connect, on, off, flash")
+        answer = input()
+        if answer.lower() == "q":
+            print("exiting")
+            break
+        elif answer.lower() == "connect": # what happens if we connect after already connected?
+            L1 = GoveeLightbulbController("L1", "D4:13:68:C4:45:E3")
+
+            print(f"Searching for bulb: {L1.name}")
+            try:
+                print("Connecting...")
+                await L1.connect()
+                print("Testing connection...")
+                await L1.test_connection()
+                L1.active = True
+            except Exception as e:
+                print(f"{type(e).__name__}: {e}")
+                L1.active = False
+                continue
+
+            print("Connection successful!")
+
+        elif answer.lower() == "on":
+            if (L1.active):
+                try:
+                    await L1.turn_on()
+                except Exception as e:
+                    print(f"{type(e).__name__}: {e}")
+            else:
+                print("light not active")
+
+        elif answer.lower() == "off":
+            if (L1.active):
+                try:
+                    await L1.turn_off()
+                except Exception as e:
+                    print(f"{type(e).__name__}: {e}")
+            else:
+                print("light not active")
+
+        elif answer.lower() == "flash":
+            if (L1.active):
+                try:
+                    for i in range(5):
+                        await L1.turn_on()
+                        await asyncio.sleep(0.5)
+                        await L1.turn_off()
+                        await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"{type(e).__name__}: {e}")
+            else:
+                print("light not active")
+            
+
+        else:
+            print("not a command")
+
+
+
+if __name__ == "__main__":
+    asyncio.run(test())
