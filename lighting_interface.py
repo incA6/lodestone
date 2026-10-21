@@ -20,7 +20,7 @@ import time # testing
 
 from govee_lightbulb_controller import *
 
-class Lighting:
+class LightingInterface:
     '''interfaces with all lights in the setup and allows for user commands + customization'''
 
     # class variables
@@ -92,9 +92,9 @@ class Lighting:
 
             # process command
             try:
-                if command == Lighting.VALID_COMMANDS[0]: # on
+                if command == LightingInterface.VALID_COMMANDS[0]: # on
                     asyncio.create_task(light.turn_on())
-                elif command == Lighting.VALID_COMMANDS[1]: # off
+                elif command == LightingInterface.VALID_COMMANDS[1]: # off
                     asyncio.create_task(light.turn_off())
             except Exception as e:
                 print(f"Command failed: {e}")
@@ -135,7 +135,7 @@ class Lighting:
             for light in self.disconnected_lights:
                 await self.connect_light(light)
             
-            await asyncio.sleep(Lighting.RETRY_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
+            await asyncio.sleep(LightingInterface.RETRY_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
 
     async def connection_test_loop(self):
         '''periodically checks all active lights (if the lights are checkable)'''
@@ -152,7 +152,7 @@ class Lighting:
                         if light not in self.disconnected_lights:
                             self.disconnected_lights.append(light)
             
-            await asyncio.sleep(Lighting.CONNECTION_TEST_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
+            await asyncio.sleep(LightingInterface.CONNECTION_TEST_TIMER) # we let the cpu go back to whatever it's doing before coming here again in 60 seconds
 
 
 class LightNotFound(Exception):
@@ -200,7 +200,7 @@ def console(lighting):
             print("Unknown command.")
 
 def main():
-    lighting = Lighting("current_device_list.txt")
+    lighting = LightingInterface("current_device_list.txt")
 
     t1 = threading.Thread(target=console, args=(lighting,))
     t2 = threading.Thread(target=lighting.start)
