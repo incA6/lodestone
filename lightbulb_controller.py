@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 class lightbulb_controller(ABC):
     @abstractmethod
     def connect_and_stay_connected(self):
-        '''connect to the lightbulb if necessary'''
+        '''connect to the lightbulb if necessary, throws error if disconnect'''
         pass
 
     @abstractmethod
