@@ -124,7 +124,7 @@ class LightingInterface:
         # must be run again if configurations or lights change
         
         # TODO: (fix) temp, for now, add just the one govee lightbulb to the matrix
-        light1 = GoveeLightbulbController("light1", "D4:13:68:C4:45:E3", self.check_active_lights)
+        light1 = GoveeLightbulbController("light1", "D4:13:68:CB:39:8D", self.check_active_lights)
         self.lighting_matrix.append(light1)
 
     async def retry(self):

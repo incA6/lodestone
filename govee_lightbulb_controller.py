@@ -1,18 +1,12 @@
-# wrap the code controlling each light into a black box with known functions: on/off, dimmer (if available), warmth (if available), color (if available)
-# this inherits from the lightbulb controller class
-# design: does the thing and throws and error if it doesn't work
-
-# TODO: temp, add more robust centralized non-hardcoded version later
-# MAC_ADDRESS = "D4:13:68:C4:45:E3"
-
-# current_time = datetime.now().time()
+# version 1.x
+# fully-auto controller for Govee smart bluetooth lightbulbs, controlled via bluetooth and MAC address
 
 import asyncio
 from govee_ble_local import discover, create_device
 
-from lightbulb_controller import LightbulbController
+from device import Device
 
-class GoveeLightbulbController(LightbulbController):
+class GoveeLightbulbController(Device):
     def __init__(self, name, MAC_ADDRESS, check_status_callback=None):
         super().__init__(name)
         self.MAC = MAC_ADDRESS
@@ -97,7 +91,7 @@ async def test():
             print("exiting")
             break
         elif answer.lower() == "connect": # what happens if we connect after already connected?
-            L1 = GoveeLightbulbController("L1", "D4:13:68:C4:45:E3")
+            L1 = GoveeLightbulbController("L1", "D4:13:68:CB:39:8D")
 
             print(f"Searching for bulb: {L1.name}")
             try:
@@ -136,9 +130,9 @@ async def test():
                 try:
                     for i in range(5):
                         await L1.turn_on()
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.2)
                         await L1.turn_off()
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.2)
                 except Exception as e:
                     print(f"{type(e).__name__}: {e}")
             else:
