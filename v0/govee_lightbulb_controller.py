@@ -94,7 +94,7 @@ async def test():
             print("exiting")
             break
         elif answer.lower() == "connect": # what happens if we connect after already connected?
-            L1 = GoveeLightbulbController("L1", "D4:13:68:CA:A1:9D")
+            L1 = GoveeLightbulbController("L1", "D4:13:68:CB:39:8D")
 
             print(f"Searching for bulb: {L1.name}")
             try:

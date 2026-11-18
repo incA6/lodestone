@@ -1,5 +1,7 @@
 # base class for device controllers
-# code should be able to fully control and handle errors for device in a self-contained manner
+# code should be able to autonomously control and handle errors for device in a self-contained manner
+# provides commands for the device coordinator to use at a user level and notifies the device coordinator of important info
+# spawns a separate thread for each device
 
 # relationship to device coordinator:
 # - this device controller requires a written notification callback function and a status update callback function from its coordinator
@@ -14,66 +16,22 @@ import asyncio
 
 class Device(ABC):
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, device_data : dict, notify_manager):
+        self.name = device_data.get("name", "Unknown name.")
+        self.desc = device_data.get("desc", "Unknown description.")
+        self.type = device_data.get("type", "Unknown device type.")
+        self.control_type = device_data.get("control_type", "Unknown control type.")
+        self.tech_specs = device_data.get("tech_specs", "Unknown tech specs.")
+
+        self.notify_manager = notify_manager
         self.active = False
 
-    @property
-    def name(self):
-        return self._name
-    
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def active(self):
-        return self._active
-    
-    @active.setter
-    def active(self, value):
-        self._active = value
-
     @abstractmethod
-    async def connect(self):
-        '''connect to the lightbulb if necessary, throws error if fail'''
-        pass
-
-    @abstractmethod
-    async def disconnect(self):
-        '''disconnect from the lightbulb if available'''
-        pass
-
-    @abstractmethod
-    async def turn_on(self):
-        pass
-
-    @abstractmethod
-    async def turn_off(self):
-        pass
-
-    @abstractmethod
-    async def set_brightness(self, brightness: int):
-        '''brightness from 0-100, if available. returns False if unavailable'''
-        pass
-
-    @abstractmethod
-    async def set_rgb(self, r: int, g: int, b: int):
-        '''rgb, if available. returns False if unavailable'''
-        pass
-
-    @abstractmethod
-    async def test_connection(self):
-        '''throws error if disconnected'''
+    def start(self):
+        '''starts autonomous control'''
         pass
 
     @abstractmethod
     async def status(self):
-        '''returns status (on/off)'''
+        '''returns status (on/off) as true/false'''
         pass
-
-    @abstractmethod
-    async def repeated_flahes(self, on_off: bool):
-        '''flashes repeatedly, if available (not safe for power switches)'''
-        pass
-

@@ -1,5 +1,12 @@
 # interface to coordinate with multiple devices
 
+# DEFAULT NOTIFICATION PROTOCOLS (all are logged)
+# "Error: invalid device setup" (fails to set up device, must be deleted and not used)
+# "Error: device disconnected" (update device status to inactive and disable user commands)
+# "Error: command failed"
+# "Error: connection failed"
+# "Log: ____" (logs notification without error to device controller log)
+
 import asyncio
 import threading
 

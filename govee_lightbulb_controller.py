@@ -1,4 +1,3 @@
-# version 1.x
 # fully-auto controller for Govee smart bluetooth lightbulbs, controlled via bluetooth and MAC address
 
 import asyncio
@@ -7,41 +6,72 @@ from govee_ble_local import discover, create_device
 from device import Device
 
 class GoveeLightbulbController(Device):
-    def __init__(self, name, MAC_ADDRESS, check_status_callback=None):
-        super().__init__(name)
-        self.MAC = MAC_ADDRESS
-        self.bulb = None
-        self.check_status_callback = check_status_callback # call back function to let the lighting interface know to check its lights
+
+    COMMAND_LIST = ["change setting []"]
+    AVAILABLE_SETTINGS = ["on_off", "brightness"]
+
+    def __init__(self, device_data : dict, notify_manager):
+        super().__init__(device_data, notify_manager)
+        self.MAC = self.tech_specs.get("MAC_address", "unknown")
+
+        self.stay_connected = True
+
+        # validate input data before starting
+        if self.tech_specs.get("bulb_type") != "Govee" or self.MAC == "unknown":
+            self.active = False
+            self.notify_manager("Error: invalid device setup")
+        else:
+            self.active = True
+
+    def start(self):
+        '''starts autonomously staying connected to and managing lightbulb'''
+        asyncio.run(self.connect())
+
+    async def status(self):
+        '''returns status (on/off)'''
+        return self.active
 
     async def connect(self):
         '''connect to the lightbulb if necessary, throws error if fail'''
+
+        self.notify_manager("Log: connecting Govee lightbulb")
         
         devices = await discover(timeout=10, allow_modelled=True)
         info = next((d for d in devices if d.ble_device.address.lower() == self.MAC.lower()), None)
-
         if info is None:
-            raise BulbNotFound(f"Bulb not found: {self.MAC}")
-
+            self.active = False
+            self.notify_manager("Error: connection failed")
+            return
         self.bulb = create_device(info.ble_device, info.sku, info.advertisement, allow_modelled=True)
 
-    async def disconnect(self):
-        '''disconnect from the lightbulb if available'''
-        pass
+        self.notify_manager("Log: successfully connected")
+        self.active = True
+
+        await self.start_heartbeat()
+
+    async def start_heartbeat(self):
+        '''periodically pings the lightbulb to maintain a connection'''
+        
+        while self.stay_connected:
+            connection_status = await self.test_connection()
+            if connection_status != True:
+                self.notify_manager(f"Error: device disconnected ({connection_status})")
+                await self.connect() # retry connection
+            await asyncio.sleep(8)
+
 
     async def turn_on(self):
-        # try:
-        #     await asyncio.wait_for(self.bulb.turn_on(), timeout=5.0)
-        # except Exception as e:
-        #     await self.check_status_callback()
-        await self.bulb.turn_on()
+        try:
+            await asyncio.wait_for(self.bulb.turn_on(), timeout=5.0)
+        except Exception as e:
+            self.notify_manager(f"Error: command failed ({e})")
     
 
     async def turn_off(self):
-        # try:
-        #     await asyncio.wait_for(self.bulb.turn_off(), timeout=5.0)
-        # except Exception as e:
-        #     await self.check_status_callback()
-        await self.bulb.turn_off()
+        try:
+            await asyncio.wait_for(self.bulb.turn_off(), timeout=5.0)
+        except Exception as e:
+            self.notify_manager(f"Error: command failed ({e})")
 
     async def set_brightness(self, brightness: int):
         '''brightness from 0-100, if available. returns False if unavailable'''
@@ -52,25 +82,16 @@ class GoveeLightbulbController(Device):
         pass
 
     async def test_connection(self):
-        '''throws error if disconnected'''
+        '''returns True if connected, Error message if disconnected'''
         try:
             await self.bulb.update()
+            return True
         except Exception as e:
-            raise BulbNotConnected(e)
-
-    async def status(self):
-        '''returns status (on/off)'''
-        pass
+            return e
 
     async def repeated_flahes(self, on_off: bool):
         '''flashes repeatedly, if available (not safe for power switches)'''
         pass    
-
-class BulbNotFound(Exception):
-    pass
-
-class BulbNotConnected(Exception):
-    pass
 
 
 
@@ -78,71 +99,46 @@ class BulbNotConnected(Exception):
 
 # TESTING
 
+def print_notif(notif):
+    print(f"Notification: {notif}")
 
-async def test():
+if __name__ == "__main__":
+    data = {
+        "name": "light_1",
+        "desc": "main light",
+        "type": "light",
+        "control_type": "bluetooth",
+        "tech_specs": {
+                "bulb_type": "Govee",
+                "brightness": 1600,
+                "controllable_brightness": True,
+                "controllable_color": True,
+                "controllable_warmth": True,
+                "MAC_address": "D4:13:68:CB:39:8D"
+        }
+    }
 
-    L1 = None # light
+    L1 = GoveeLightbulbController(data, print_notif)
+    L1.start()
 
-    # user input loop
     while True:
-        print("Commands: q, connect, on, off, flash")
+        print("Commands: q, on, off")
         answer = input()
         if answer.lower() == "q":
             print("exiting")
             break
-        elif answer.lower() == "connect": # what happens if we connect after already connected?
-            L1 = GoveeLightbulbController("L1", "D4:13:68:CB:39:8D")
-
-            print(f"Searching for bulb: {L1.name}")
-            try:
-                print("Connecting...")
-                await L1.connect()
-                print("Testing connection...")
-                await L1.test_connection()
-                L1.active = True
-            except Exception as e:
-                print(f"{type(e).__name__}: {e}")
-                L1.active = False
-                continue
-
-            print("Connection successful!")
 
         elif answer.lower() == "on":
             if (L1.active):
-                try:
-                    await L1.turn_on()
-                except Exception as e:
-                    print(f"{type(e).__name__}: {e}")
+                L1.turn_on
             else:
                 print("light not active")
 
         elif answer.lower() == "off":
             if (L1.active):
-                try:
-                    await L1.turn_off()
-                except Exception as e:
-                    print(f"{type(e).__name__}: {e}")
+                L1.turn_off
             else:
                 print("light not active")
-
-        elif answer.lower() == "flash":
-            if (L1.active):
-                try:
-                    for i in range(5):
-                        await L1.turn_on()
-                        await asyncio.sleep(0.2)
-                        await L1.turn_off()
-                        await asyncio.sleep(0.2)
-                except Exception as e:
-                    print(f"{type(e).__name__}: {e}")
-            else:
-                print("light not active")
-            
-
+        
         else:
             print("not a command")
-
-
-
-if __name__ == "__main__":
-    asyncio.run(test())
