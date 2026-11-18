@@ -1,16 +1,50 @@
-{
-    "name": "light_1",
-    "desc": "main light",
-    "type": "light",
-    "control_type": "bluetooth",
-    "tech_specs": [
-        {
-            "bulb_type": "Govee",
-            "brightness": 1600,
-            "controllable_brightness": true,
-            "controllable_color": true,
-            "controllable_warmth": true,
-            "MAC_address": "D4:13:68:CB:39:8D"
-        }
-    ]
-}
+[  
+    {
+        "name": "light_1",
+        "desc": "main light",
+        "type": "light",
+        "control_type": "bluetooth",
+        "tech_specs": [
+            {
+                "bulb_type": "Govee",
+                "brightness": 1600,
+                "controllable_brightness": true,
+                "controllable_color": true,
+                "controllable_warmth": true,
+                "MAC_address": "D4:13:68:CB:39:8D"
+            }
+        ]
+    },
+    {
+        "name": "light_2",
+        "desc": "nightstand spotlight",
+        "type": "light",
+        "control_type": "bluetooth",
+        "tech_specs": [
+            {
+                "bulb_type": "Govee",
+                "brightness": 1600,
+                "controllable_brightness": true,
+                "controllable_color": true,
+                "controllable_warmth": true,
+                "MAC_address": "D4:13:68:C4:45:E3"
+            }
+        ]
+    },
+    {
+        "name": "light_3",
+        "desc": "desk light",
+        "type": "light",
+        "control_type": "bluetooth",
+        "tech_specs": [
+            {
+                "bulb_type": "Govee",
+                "brightness": 1600,
+                "controllable_brightness": true,
+                "controllable_color": true,
+                "controllable_warmth": true,
+                "MAC_address": "D4:13:68:CA:A1:9D"
+            }
+        ]
+    }
+]

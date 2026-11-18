@@ -5,7 +5,7 @@ import shlex
 
 from govee_ble_local import discover, create_device
 
-MAC_ADDRESS = "D4:13:68:C4:45:E3"
+MAC_ADDRESS = "D4:13:68:CA:A1:9D"
 
 
 HELP = """
